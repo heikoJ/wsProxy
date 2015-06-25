@@ -8,19 +8,30 @@ import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.ClassPathResource;
+import org.springframework.expression.ExpressionParser;
+import org.springframework.expression.spel.standard.SpelExpressionParser;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.integration.annotation.IntegrationComponentScan;
 import org.springframework.integration.dsl.IntegrationFlow;
 import org.springframework.integration.dsl.IntegrationFlows;
+import org.springframework.integration.dsl.support.GenericHandler;
 import org.springframework.integration.dsl.support.Transformers;
 import org.springframework.integration.http.inbound.HttpRequestHandlingMessagingGateway;
 import org.springframework.integration.http.inbound.RequestMapping;
 import org.springframework.integration.http.outbound.HttpRequestExecutingMessageHandler;
+import org.springframework.integration.http.support.DefaultHttpHeaderMapper;
+import org.springframework.integration.mapping.HeaderMapper;
+import org.springframework.integration.transformer.GenericTransformer;
 import org.springframework.integration.ws.WebServiceHeaders;
+import org.springframework.messaging.Message;
+import org.springframework.messaging.MessageHandler;
+import org.springframework.messaging.MessageHeaders;
+import org.springframework.messaging.MessagingException;
 import org.springframework.ws.config.annotation.EnableWs;
 import org.springframework.ws.config.annotation.WsConfigurerAdapter;
 
+import javax.xml.soap.SOAPHeader;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -55,8 +66,21 @@ public class Application extends WsConfigurerAdapter {
         RequestMapping mapping = new RequestMapping();
         mapping.setPathPatterns(wsInboundPath);
         gateway.setRequestMapping(mapping);
+        gateway.setHeaderMapper(soapHeaderMapper());
 
         return gateway;
+    }
+
+
+    public HeaderMapper<HttpHeaders> soapHeaderMapper() {
+        return new DefaultHttpHeaderMapper() {
+            @Override
+            public Map<String, Object> toHeaders(HttpHeaders source) {
+                Map<String,Object> map = super.toHeaders(source);
+                map.put(WebServiceHeaders.SOAP_ACTION,source.get("SOAPAction").get(0));
+                return map;
+            }
+        };
     }
 
 
@@ -75,13 +99,12 @@ public class Application extends WsConfigurerAdapter {
 
     private Map<String,Object> headers() {
         Map<String,Object> headers = new HashMap<>();
-        headers.put(WebServiceHeaders.SOAP_ACTION,
-                "http://www.w3schools.com/webservices/CelsiusToFahrenheit");
         headers.put(HttpHeaders.CONTENT_TYPE, "text/xml;charset=UTF-8");
 
         return headers;
 
     }
+
 
 
     @Bean
