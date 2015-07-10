@@ -16,7 +16,10 @@ import org.springframework.expression.ExpressionParser;
 import org.springframework.expression.spel.standard.SpelExpressionParser;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.MediaType;
 import org.springframework.http.client.ClientHttpResponse;
+import org.springframework.http.converter.HttpMessageConverter;
+import org.springframework.http.converter.StringHttpMessageConverter;
 import org.springframework.integration.annotation.IntegrationComponentScan;
 import org.springframework.integration.config.EnableIntegration;
 import org.springframework.integration.dsl.IntegrationFlow;
@@ -29,7 +32,9 @@ import org.springframework.integration.http.outbound.HttpRequestExecutingMessage
 import org.springframework.integration.http.support.DefaultHttpHeaderMapper;
 import org.springframework.integration.jmx.config.EnableIntegrationMBeanExport;
 import org.springframework.integration.mapping.HeaderMapper;
+import org.springframework.integration.mapping.OutboundMessageMapper;
 import org.springframework.integration.transformer.GenericTransformer;
+import org.springframework.integration.transformer.Transformer;
 import org.springframework.integration.ws.WebServiceHeaders;
 import org.springframework.integration.xml.transformer.XsltPayloadTransformer;
 import org.springframework.jmx.support.MBeanServerFactoryBean;
@@ -47,7 +52,10 @@ import javax.servlet.Filter;
 import javax.servlet.http.HttpSessionListener;
 import javax.xml.soap.SOAPHeader;
 import java.io.IOException;
+import java.nio.charset.Charset;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -99,7 +107,24 @@ public class Application extends SpringBootServletInitializer {
         gateway.setRequestMapping(mapping);
         gateway.setHeaderMapper(soapHeaderMapper());
 
+        gateway.setMessageConverters(getXmlMessageConverter());
+
         return gateway;
+    }
+
+    private List<HttpMessageConverter<?>> getXmlMessageConverter() {
+        List<HttpMessageConverter<?>> converters = new ArrayList<>();
+
+        StringHttpMessageConverter converter = new StringHttpMessageConverter(Charset.forName("UTF-8"));
+        converter.setWriteAcceptCharset(false);
+
+        List<MediaType> mediaTypes = new ArrayList<>();
+        mediaTypes.add(MediaType.TEXT_XML);
+
+        converter.setSupportedMediaTypes(mediaTypes);
+        converters.add(converter);
+
+        return converters;
     }
 
 
@@ -116,21 +141,26 @@ public class Application extends SpringBootServletInitializer {
 
 
 
-
     @Bean
     HttpRequestExecutingMessageHandler httpOutboundGateway(ApplicationContext context){
         HttpRequestExecutingMessageHandler gateway = new HttpRequestExecutingMessageHandler(wsOutboundAddress);
         gateway.setApplicationContext(context);
         gateway.setHttpMethod(HttpMethod.POST);
         gateway.setExpectedResponseType(String.class);
+
         gateway.setErrorHandler(new DefaultResponseErrorHandler() {
+
+
+            @Override
+            public boolean hasError(ClientHttpResponse response) throws IOException {
+                return false;
+            }
 
             @Override
             public void handleError(ClientHttpResponse response) throws IOException {
 
             }
         });
-
 
         return gateway;
     }
@@ -153,6 +183,14 @@ public class Application extends SpringBootServletInitializer {
                 enrichHeaders(headers()).
                 handle(outbound).
                 transform(Transformers.xslt(new ClassPathResource(xsltPath))).
+                transform(new Transformer() {
+                    @Override
+                    public Message<?> transform(Message<?> message) {
+                        System.out.println("MESSAGE: " + message.getPayload());
+                        System.out.println("HEADERS:" + message.getHeaders());
+                        return message;
+                    }
+                }).
                 get();
     }
 
