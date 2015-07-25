@@ -1,5 +1,8 @@
 package hj.wsProxy;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
@@ -16,6 +19,8 @@ public abstract class Decompressor {
 
     private static Map<String, Decompressor> decompressors;
 
+    private static final Logger LOGGER = LoggerFactory.getLogger(Decompressor.class);
+
     static {
         decompressors = new HashMap<>();
         decompressors.put("gzip", new GZIPDecompressor());
@@ -27,6 +32,8 @@ public abstract class Decompressor {
     public static Decompressor forEncoding(String inputEncoding) {
         Decompressor decompressor = decompressors.get(inputEncoding);
         if(decompressor==null) decompressor = decompressors.get(null);
+
+        LOGGER.info("Using " + decompressor.getClass().getSimpleName() + " for " + inputEncoding + " encoding");
 
         return decompressor;
     }
