@@ -7,7 +7,7 @@
     <parent>
         <artifactId>spring-boot-starter-parent</artifactId>
         <groupId>org.springframework.boot</groupId>
-        <version>1.2.1.RELEASE</version>
+        <version>1.2.5.RELEASE</version>
     </parent>
 
     <groupId>hj</groupId>
@@ -21,7 +21,15 @@
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
                 <version>1.1.6.RELEASE</version>
+                <configuration>
+                    <jvmArguments>
+                        -Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=y,address=5005
+                    </jvmArguments>
+                </configuration>
             </plugin>
+
+
+
 
 
             <plugin>
@@ -161,10 +169,11 @@
             <version>1.56.0</version>
         </dependency>
 
+
         <dependency>
-            <groupId>org.jrobin</groupId>
-            <artifactId>jrobin</artifactId>
-            <version>1.5.9</version>
+            <groupId>net.sf.saxon</groupId>
+            <artifactId>Saxon-HE</artifactId>
+            <version>9.5.0.1</version>
         </dependency>
 
 

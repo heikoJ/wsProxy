@@ -1,30 +1,26 @@
 package hj.wsProxy;
 
-import net.bull.javamelody.MonitoringFilter;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.boot.context.embedded.FilterRegistrationBean;
 import org.springframework.boot.context.web.SpringBootServletInitializer;
 import org.springframework.context.ApplicationContext;
-import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.EnableAspectJAutoProxy;
 import org.springframework.context.annotation.ImportResource;
 import org.springframework.core.io.ClassPathResource;
-import org.springframework.expression.ExpressionParser;
-import org.springframework.expression.spel.standard.SpelExpressionParser;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.http.client.ClientHttpResponse;
+import org.springframework.http.converter.ByteArrayHttpMessageConverter;
 import org.springframework.http.converter.HttpMessageConverter;
 import org.springframework.http.converter.StringHttpMessageConverter;
 import org.springframework.integration.annotation.IntegrationComponentScan;
 import org.springframework.integration.config.EnableIntegration;
 import org.springframework.integration.dsl.IntegrationFlow;
 import org.springframework.integration.dsl.IntegrationFlows;
-import org.springframework.integration.dsl.support.GenericHandler;
 import org.springframework.integration.dsl.support.Transformers;
 import org.springframework.integration.http.inbound.HttpRequestHandlingMessagingGateway;
 import org.springframework.integration.http.inbound.RequestMapping;
@@ -32,31 +28,26 @@ import org.springframework.integration.http.outbound.HttpRequestExecutingMessage
 import org.springframework.integration.http.support.DefaultHttpHeaderMapper;
 import org.springframework.integration.jmx.config.EnableIntegrationMBeanExport;
 import org.springframework.integration.mapping.HeaderMapper;
-import org.springframework.integration.mapping.OutboundMessageMapper;
-import org.springframework.integration.transformer.GenericTransformer;
-import org.springframework.integration.transformer.Transformer;
+import org.springframework.integration.transformer.AbstractTransformer;
 import org.springframework.integration.ws.WebServiceHeaders;
-import org.springframework.integration.xml.transformer.XsltPayloadTransformer;
 import org.springframework.jmx.support.MBeanServerFactoryBean;
 import org.springframework.messaging.Message;
-import org.springframework.messaging.MessageHandler;
 import org.springframework.messaging.MessageHeaders;
-import org.springframework.messaging.MessagingException;
+import org.springframework.messaging.support.GenericMessage;
 import org.springframework.web.client.DefaultResponseErrorHandler;
-import org.springframework.web.client.ResponseErrorHandler;
 import org.springframework.web.servlet.config.annotation.EnableWebMvc;
-import org.springframework.ws.config.annotation.EnableWs;
-import org.springframework.ws.config.annotation.WsConfigurerAdapter;
 
 import javax.servlet.Filter;
 import javax.servlet.http.HttpSessionListener;
-import javax.xml.soap.SOAPHeader;
+import java.io.BufferedReader;
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.nio.charset.Charset;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import java.util.zip.DeflaterInputStream;
+import java.util.zip.GZIPInputStream;
+import java.util.zip.InflaterInputStream;
 
 /**
  * Created by heiko on 20.06.15.
@@ -64,13 +55,17 @@ import java.util.Map;
 @SpringBootApplication
 @IntegrationComponentScan
 @EnableIntegration
-@EnableIntegrationMBeanExport(server = "mbeanServer")
+@ImportResource("classpath:net/bull/javamelody/monitoring-spring-aspectj.xml")
 @Configuration
 @EnableWebMvc
+@EnableAspectJAutoProxy
 public class Application extends SpringBootServletInitializer {
 
     public static void main(String[] args) {
-        ConfigurableApplicationContext ctx = SpringApplication.run(Application.class, args);
+        //Set saxon as transformer.
+        System.setProperty("javax.xml.transform.TransformerFactory",
+                "net.sf.saxon.TransformerFactoryImpl");
+        SpringApplication.run(Application.class, args);
     }
 
 
@@ -107,24 +102,26 @@ public class Application extends SpringBootServletInitializer {
         gateway.setRequestMapping(mapping);
         gateway.setHeaderMapper(soapHeaderMapper());
 
-        gateway.setMessageConverters(getXmlMessageConverter());
+        List<HttpMessageConverter<?>> converters = new ArrayList<>();
+        converters.add(new ByteArrayHttpMessageConverter());
+        converters.add(getXmlMessageConverter());
+
+        gateway.setMessageConverters(converters);
+
+        gateway.setRequestPayloadType(byte[].class);
+
+
+
 
         return gateway;
     }
 
-    private List<HttpMessageConverter<?>> getXmlMessageConverter() {
-        List<HttpMessageConverter<?>> converters = new ArrayList<>();
-
+    private HttpMessageConverter<?> getXmlMessageConverter() {
         StringHttpMessageConverter converter = new StringHttpMessageConverter(Charset.forName("UTF-8"));
         converter.setWriteAcceptCharset(false);
+        converter.setSupportedMediaTypes(Collections.singletonList(MediaType.TEXT_XML));
 
-        List<MediaType> mediaTypes = new ArrayList<>();
-        mediaTypes.add(MediaType.TEXT_XML);
-
-        converter.setSupportedMediaTypes(mediaTypes);
-        converters.add(converter);
-
-        return converters;
+        return converter;
     }
 
 
@@ -134,6 +131,11 @@ public class Application extends SpringBootServletInitializer {
             public Map<String, Object> toHeaders(HttpHeaders source) {
                 Map<String,Object> map = super.toHeaders(source);
                 map.put(WebServiceHeaders.SOAP_ACTION,source.get("SOAPAction").get(0));
+
+
+
+                map.put(HttpHeaders.CONTENT_TYPE, source.get(HttpHeaders.CONTENT_TYPE));
+                map.put(HttpHeaders.CONTENT_ENCODING, source.get(HttpHeaders.CONTENT_ENCODING));
                 return map;
             }
         };
@@ -147,6 +149,7 @@ public class Application extends SpringBootServletInitializer {
         gateway.setApplicationContext(context);
         gateway.setHttpMethod(HttpMethod.POST);
         gateway.setExpectedResponseType(String.class);
+
 
         gateway.setErrorHandler(new DefaultResponseErrorHandler() {
 
@@ -177,20 +180,25 @@ public class Application extends SpringBootServletInitializer {
 
 
     @Bean
-    public IntegrationFlow convert(HttpRequestHandlingMessagingGateway inbound, HttpRequestExecutingMessageHandler outbound) {
+    CompressionTransformer compressionTransformer() {
+        return new CompressionTransformer();
+    }
+
+
+    @Bean
+    public IntegrationFlow convert(HttpRequestHandlingMessagingGateway inbound, HttpRequestExecutingMessageHandler outbound, CompressionTransformer compressionTransformer) {
+
+
+
+
+
         return IntegrationFlows.
                 from(inbound).
+                transform(compressionTransformer).
                 enrichHeaders(headers()).
                 handle(outbound).
                 transform(Transformers.xslt(new ClassPathResource(xsltPath))).
-                transform(new Transformer() {
-                    @Override
-                    public Message<?> transform(Message<?> message) {
-                        System.out.println("MESSAGE: " + message.getPayload());
-                        System.out.println("HEADERS:" + message.getHeaders());
-                        return message;
-                    }
-                }).
+
                 get();
     }
 
