@@ -27,7 +27,6 @@ public class CompressionTransformer extends AbstractTransformer {
 
         String contentEncoding = getContentEncoding(message.getHeaders());
 
-        LOGGER.info("Content encoding: " + contentEncoding);
         long start = System.nanoTime();
 
         String resultPayload = Decompressor.forEncoding(contentEncoding).decompress(bytes, "UTF-8");
