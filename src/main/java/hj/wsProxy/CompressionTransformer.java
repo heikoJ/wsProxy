@@ -72,7 +72,12 @@ public class CompressionTransformer extends AbstractTransformer {
     }
 
     private String extractCharset(String contentType) {
-        return contentType.replaceFirst(".*;charset=(.*)","$1");
+        String charset = contentType.replaceFirst(".*;charset=(.*)","$1");
+        if(StringUtils.isEmpty(charset)) {
+            charset = Charset.defaultCharset().name();
+        }
+
+        return charset;
     }
 
 }
