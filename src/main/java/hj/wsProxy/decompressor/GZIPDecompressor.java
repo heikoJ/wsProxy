@@ -12,6 +12,7 @@ public class GZIPDecompressor extends Decompressor {
 
     @Override
     public String decompress(byte[] bytes, String encoding) throws IOException {
+        if(bytes==null) return null;
         GZIPInputStream gis = new GZIPInputStream(new ByteArrayInputStream(bytes));
         return getUncompressedString(gis,encoding);
     }

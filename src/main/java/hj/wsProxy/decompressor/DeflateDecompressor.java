@@ -12,6 +12,7 @@ public class DeflateDecompressor extends Decompressor {
 
     @Override
     public String decompress(byte[] bytes, String encoding) throws IOException {
+        if(bytes==null) return null;
         InflaterInputStream dis = new InflaterInputStream(new ByteArrayInputStream(bytes));
         return getUncompressedString(dis,encoding);
     }
