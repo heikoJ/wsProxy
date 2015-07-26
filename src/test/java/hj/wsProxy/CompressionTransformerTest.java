@@ -8,8 +8,10 @@ import org.junit.Test;
 import org.springframework.http.HttpHeaders;
 import org.springframework.integration.support.MessageBuilder;
 import org.springframework.messaging.Message;
+import org.springframework.messaging.MessageHeaders;
 
-import java.util.UUID;
+import java.nio.charset.Charset;
+import java.util.*;
 
 /**
  * Created by heiko on 26.07.15.
@@ -47,8 +49,8 @@ public class CompressionTransformerTest {
         Message<byte[]> fromMessage =
                         MessageBuilder.
                         withPayload(payload).
-                        setHeader(HttpHeaders.CONTENT_TYPE, "text/xml;charset=UTF-8").
-                        setHeader(HttpHeaders.CONTENT_ENCODING,"gzip").
+                        setHeader(HttpHeaders.CONTENT_TYPE, Collections.singletonList("text/xml;charset=UTF-8")).
+                        setHeader(HttpHeaders.CONTENT_ENCODING, Collections.singletonList("gzip")).
                         build();
 
         Profiler profiler = Profiler.
@@ -62,7 +64,7 @@ public class CompressionTransformerTest {
 
         Assert.assertEquals(toMessage.getPayload(),UNCOMPRESSED_STRING);
         Assert.assertFalse(toMessage.getHeaders().containsKey(HttpHeaders.CONTENT_ENCODING));
-        Assert.assertEquals("text/xml;charset=UTF-8",toMessage.getHeaders().get(HttpHeaders.CONTENT_TYPE));
+        Assert.assertEquals("text/xml;charset=UTF-8",((List<String>)toMessage.getHeaders().get(HttpHeaders.CONTENT_TYPE)).get(0));
 
     }
 
@@ -86,8 +88,8 @@ public class CompressionTransformerTest {
         Message<byte[]> fromMessage =
                 MessageBuilder.
                         withPayload(payload).
-                        setHeader(HttpHeaders.CONTENT_TYPE, "text/xml;charset=UTF-8").
-                        setHeader(HttpHeaders.CONTENT_ENCODING,"gzip").
+                        setHeader(HttpHeaders.CONTENT_TYPE, Collections.singletonList("text/xml;charset=UTF-8")).
+                        setHeader(HttpHeaders.CONTENT_ENCODING, Collections.singletonList("gzip")).
                         build();
 
         profiler = Profiler.
@@ -101,9 +103,65 @@ public class CompressionTransformerTest {
 
         Assert.assertEquals(toMessage.getPayload(),largeString);
         Assert.assertFalse(toMessage.getHeaders().containsKey(HttpHeaders.CONTENT_ENCODING));
-        Assert.assertEquals("text/xml;charset=UTF-8",toMessage.getHeaders().get(HttpHeaders.CONTENT_TYPE));
+        Assert.assertEquals("text/xml;charset=UTF-8",((List<String>)toMessage.getHeaders().get(HttpHeaders.CONTENT_TYPE)).get(0));
 
     }
+
+
+    @Test
+      public void testExtractCharset() throws Exception {
+
+        Map<String,Object> headerMap =Collections.<String,Object>singletonMap(HttpHeaders.CONTENT_TYPE,Collections.singletonList("text/xml;charset=UTF-8"));
+        MessageHeaders headers = new MessageHeaders(headerMap);
+
+        String charset = transformer.getContentCharset(headers);
+
+        Assert.assertEquals("UTF-8", charset);
+
+
+    }
+
+    @Test
+    public void testExtractCharset_missing() throws Exception {
+
+        Map<String,Object> headerMap =Collections.<String,Object>singletonMap(HttpHeaders.CONTENT_TYPE,Collections.singletonList("text/xml"));
+        MessageHeaders headers = new MessageHeaders(headerMap);
+
+        String charset = transformer.getContentCharset(headers);
+
+
+        Assert.assertEquals(Charset.defaultCharset().name(), charset);
+
+    }
+
+    @Test
+    public void testExtractCharset_missing2() throws Exception {
+
+        Map<String,Object> headerMap =Collections.<String,Object>singletonMap(HttpHeaders.CONTENT_TYPE,Collections.singletonList("text/xml;charset="));
+        MessageHeaders headers = new MessageHeaders(headerMap);
+
+        String charset = transformer.getContentCharset(headers);
+
+
+        Assert.assertEquals(Charset.defaultCharset().name(), charset);
+
+    }
+
+    @Test
+    public void testExtractCharset_null() throws Exception {
+
+        Map<String,Object> headerMap =Collections.<String,Object>singletonMap(HttpHeaders.CONTENT_TYPE,Collections.singletonList(null));
+        MessageHeaders headers = new MessageHeaders(headerMap);
+
+        String charset = transformer.getContentCharset(headers);
+
+
+        Assert.assertEquals(Charset.defaultCharset().name(), charset);
+
+    }
+
+
+
 
     private String makeLargeRandomString() {
         Profiler profiler =
@@ -111,7 +169,7 @@ public class CompressionTransformerTest {
                         withSubject("makeLargeRandomString").
                         start();
         StringBuilder sb = new StringBuilder();
-        for(int i=0;i< 1000000;i++) {
+        for(int i=0;i< 700000;i++) {
             sb.append(UUID.randomUUID().toString());
         }
         String result = sb.toString();

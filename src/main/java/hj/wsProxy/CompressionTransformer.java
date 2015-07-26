@@ -13,6 +13,7 @@ import org.springframework.messaging.MessageHeaders;
 import org.springframework.util.StringUtils;
 
 import java.nio.charset.Charset;
+import java.util.List;
 
 /**
  * Created by heiko on 25.07.15.
@@ -58,26 +59,39 @@ public class CompressionTransformer extends AbstractTransformer {
 
 
     private String getContentEncoding(MessageHeaders headers) {
-        return (String)headers.get(HttpHeaders.CONTENT_ENCODING);
+        List<String> values  = (List<String>)headers.get(HttpHeaders.CONTENT_ENCODING);
 
-    }
-
-    private String getContentCharset(MessageHeaders headers) {
-        String contentType = (String)headers.get(HttpHeaders.CONTENT_TYPE);
-        if(StringUtils.isEmpty(contentType)) {
-            return Charset.defaultCharset().name();
+        if(values==null || values.isEmpty()) {
+            return null;
         }
 
-        return extractCharset(contentType);
+        return values.get(0);
+
     }
 
-    private String extractCharset(String contentType) {
-        String charset = contentType.replaceFirst(".*;charset=(.*)","$1");
-        if(StringUtils.isEmpty(charset)) {
+    String getContentCharset(MessageHeaders headers) {
+        List<String> values  = (List<String>)headers.get(HttpHeaders.CONTENT_TYPE);
+
+        if(values==null || values.isEmpty()) {
+            return null;
+        }
+
+        String contentType = values.get(0);
+        String charset = extractCharsetOrNull(contentType);
+
+        if(charset==null) {
             charset = Charset.defaultCharset().name();
         }
 
         return charset;
+    }
+
+    private String extractCharsetOrNull(String contentType) {
+        if(StringUtils.isEmpty(contentType)) return null;
+        if(contentType.matches("charset=.+")) {
+            return contentType.replaceFirst("^.*;charset=(.+)$", "$1");
+        }
+        return null;
     }
 
 }
