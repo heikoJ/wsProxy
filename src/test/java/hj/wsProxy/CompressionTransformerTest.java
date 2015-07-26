@@ -77,7 +77,7 @@ public class CompressionTransformerTest {
 
         Profiler profiler = Profiler.
                 forPrintStream(System.out).
-                withSubject("compressLargString").
+                withSubject("compressLargeString").
                 start();
         byte[] payload =  CompressionUtils.gzipString(largeString);
 
