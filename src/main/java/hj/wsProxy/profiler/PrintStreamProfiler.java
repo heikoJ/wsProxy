@@ -10,8 +10,7 @@ class PrintStreamProfiler extends Profiler {
 
     private PrintStream printStream;
 
-    public PrintStreamProfiler(PrintStream printStream, String subject) {
-        super(subject);
+    public PrintStreamProfiler(PrintStream printStream) {
         this.printStream = printStream;
     }
 

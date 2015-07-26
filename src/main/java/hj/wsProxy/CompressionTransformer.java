@@ -13,7 +13,6 @@ import org.springframework.messaging.MessageHeaders;
 import org.springframework.util.StringUtils;
 
 import java.nio.charset.Charset;
-import java.util.List;
 
 /**
  * Created by heiko on 25.07.15.
@@ -33,7 +32,8 @@ public class CompressionTransformer extends AbstractTransformer {
         String fromCharset = getContentCharset(headers);
 
         Profiler profiler = Profiler.
-                loggerProfiler(LOGGER," decompression").
+                forLogger(LOGGER).
+                withSubject("decompression").
                 start();
 
         String toPayload = Decompressor.

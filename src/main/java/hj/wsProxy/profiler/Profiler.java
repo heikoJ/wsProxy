@@ -14,16 +14,20 @@ public abstract class Profiler {
 
     private String subject;
 
-    protected Profiler(String subject) {
+
+
+
+    public static Profiler forPrintStream(PrintStream printStream) {
+        return new PrintStreamProfiler(printStream);
+    }
+
+    public static Profiler forLogger(Logger logger) {
+        return new LoggerProfiler(logger);
+    }
+
+    public Profiler withSubject(String subject) {
         this.subject = subject;
-    }
-
-    public static Profiler printStreamProfiler(PrintStream printStream,String subject) {
-        return new PrintStreamProfiler(printStream,subject);
-    }
-
-    public static Profiler loggerProfiler(Logger logger, String subject) {
-        return new LoggerProfiler(logger,subject);
+        return this;
     }
 
     public Profiler start() {

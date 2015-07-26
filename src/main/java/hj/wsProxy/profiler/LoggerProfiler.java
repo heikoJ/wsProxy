@@ -9,8 +9,7 @@ public class LoggerProfiler extends Profiler {
 
     private Logger logger;
 
-    public LoggerProfiler(Logger logger,String subject) {
-        super(subject);
+    public LoggerProfiler(Logger logger) {
         this.logger = logger;
     }
 

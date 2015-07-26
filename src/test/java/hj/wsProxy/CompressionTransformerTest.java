@@ -52,7 +52,8 @@ public class CompressionTransformerTest {
                         build();
 
         Profiler profiler = Profiler.
-                printStreamProfiler(System.out,"decompression").
+                forPrintStream(System.out).
+                withSubject("decompression").
                 start();
 
         Message<String> toMessage = (Message<String>) transformer.doTransform(fromMessage);
@@ -74,7 +75,13 @@ public class CompressionTransformerTest {
 
         System.out.println("size: " + largeString.getBytes("UTF-8").length / 1024 / 1024 + "MB");
 
+        Profiler profiler = Profiler.
+                forPrintStream(System.out).
+                withSubject("compressLargString").
+                start();
         byte[] payload =  CompressionUtils.gzipString(largeString);
+
+        profiler.endAndPrint();
 
         Message<byte[]> fromMessage =
                 MessageBuilder.
@@ -83,8 +90,9 @@ public class CompressionTransformerTest {
                         setHeader(HttpHeaders.CONTENT_ENCODING,"gzip").
                         build();
 
-        Profiler profiler = Profiler.
-                printStreamProfiler(System.out,"decompression").
+        profiler = Profiler.
+                forPrintStream(System.out).
+                withSubject("decompression").
                 start();
         Message<String> toMessage = (Message<String>) transformer.doTransform(fromMessage);
 
@@ -98,12 +106,19 @@ public class CompressionTransformerTest {
     }
 
     private String makeLargeRandomString() {
+        Profiler profiler =
+                Profiler.forPrintStream(System.out).
+                        withSubject("makeLargeRandomString").
+                        start();
         StringBuilder sb = new StringBuilder();
         for(int i=0;i< 1000000;i++) {
             sb.append(UUID.randomUUID().toString());
         }
+        String result = sb.toString();
 
-        return sb.toString();
+        profiler.endAndPrint();
+
+        return result;
 
     }
 
