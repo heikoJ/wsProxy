@@ -138,6 +138,13 @@ public class Application extends SpringBootServletInitializer {
                 map.put(HttpHeaders.CONTENT_ENCODING, source.get(HttpHeaders.CONTENT_ENCODING));
                 return map;
             }
+
+            @Override
+            public void fromHeaders(MessageHeaders headers, HttpHeaders target) {
+                super.fromHeaders(headers, target);
+                target.put(HttpHeaders.CONTENT_TYPE,Collections.singletonList("text/xml;charset=UTF-8"));
+                target.put(HttpHeaders.CONTENT_ENCODING,Collections.singletonList("gzip"));
+            }
         };
     }
 
@@ -148,7 +155,17 @@ public class Application extends SpringBootServletInitializer {
         HttpRequestExecutingMessageHandler gateway = new HttpRequestExecutingMessageHandler(wsOutboundAddress);
         gateway.setApplicationContext(context);
         gateway.setHttpMethod(HttpMethod.POST);
-        gateway.setExpectedResponseType(String.class);
+        gateway.setExpectedResponseType(byte[].class);
+
+        gateway.setHeaderMapper(new DefaultHttpHeaderMapper() {
+            @Override
+            public void fromHeaders(MessageHeaders headers, HttpHeaders target) {
+                super.fromHeaders(headers, target);
+
+                target.put(HttpHeaders.ACCEPT_ENCODING,Collections.singletonList("gzip"))  ;
+
+            }
+        });
 
 
         gateway.setErrorHandler(new DefaultResponseErrorHandler() {
@@ -197,7 +214,7 @@ public class Application extends SpringBootServletInitializer {
                 transform(compressionTransformer).
                 enrichHeaders(headers()).
                 handle(outbound).
-                transform(Transformers.xslt(new ClassPathResource(xsltPath))).
+             //   transform(Transformers.xslt(new ClassPathResource(xsltPath))).
 
                 get();
     }
