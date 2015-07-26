@@ -1,4 +1,4 @@
-package hj.wsProxy;
+package hj.wsProxy.decompressor;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;

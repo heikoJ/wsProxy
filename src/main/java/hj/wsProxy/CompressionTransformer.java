@@ -1,14 +1,18 @@
 package hj.wsProxy;
 
+import hj.wsProxy.decompressor.Decompressor;
+import hj.wsProxy.profiler.Profiler;
 import net.bull.javamelody.MonitoredWithSpring;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
+import org.springframework.integration.support.MessageBuilder;
 import org.springframework.integration.transformer.AbstractTransformer;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageHeaders;
-import org.springframework.messaging.support.GenericMessage;
+import org.springframework.util.StringUtils;
 
+import java.nio.charset.Charset;
 import java.util.List;
 
 /**
@@ -22,35 +26,55 @@ public class CompressionTransformer extends AbstractTransformer {
     private static final Logger LOGGER = LoggerFactory.getLogger(CompressionTransformer.class);
 
     @Override
-    protected Object doTransform(Message<?> message) throws Exception {
-        byte[] bytes = (byte[])message.getPayload();
+    protected Object doTransform(Message<?> fromMessage) throws Exception {
+        byte[] fromPayload = (byte[])fromMessage.getPayload();
+        MessageHeaders headers = fromMessage.getHeaders();
+        String fromContentEncoding = getContentEncoding(headers);
+        String fromCharset = getContentCharset(headers);
 
-        String contentEncoding = getContentEncoding(message.getHeaders());
+        Profiler profiler = Profiler.
+                loggerProfiler(LOGGER," decompression").
+                start();
 
-        long start = System.nanoTime();
+        String toPayload = Decompressor.
+                forEncoding(fromContentEncoding).
+                decompress(fromPayload, fromCharset);
 
-        String resultPayload = Decompressor.forEncoding(contentEncoding).decompress(bytes, "UTF-8");
+        profiler.endAndPrint();
 
-        long end = System.nanoTime();
-
-        LOGGER.info("Transformation took " + (end - start) / 1000000.0 + " milliseconds");
-
-        return new GenericMessage<>(resultPayload,message.getHeaders());
+        return createUncompressedMessage(toPayload,headers);
 
     }
 
 
+
+    private Message<String> createUncompressedMessage(String payload,MessageHeaders headers) {
+        return MessageBuilder.
+                withPayload(payload).
+                copyHeaders(headers).
+                removeHeader(HttpHeaders.CONTENT_ENCODING).
+                build();
+    }
 
 
     private String getContentEncoding(MessageHeaders headers) {
-        List<String> values  = (List<String>)headers.get(HttpHeaders.CONTENT_ENCODING);
+        return (String)headers.get(HttpHeaders.CONTENT_ENCODING);
 
-        if(values==null || values.isEmpty()) {
-            return null;
+    }
+
+    private String getContentCharset(MessageHeaders headers) {
+        String contentType = (String)headers.get(HttpHeaders.CONTENT_TYPE);
+        if(StringUtils.isEmpty(contentType)) {
+            return Charset.defaultCharset().name();
         }
 
-        return values.get(0);
+        return extractCharset(contentType);
     }
+
+    private String extractCharset(String contentType) {
+        return contentType.replaceFirst(".*;charset=(.*)","$1");
+    }
+
 }
 
 
