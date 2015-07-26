@@ -3,7 +3,7 @@ package hj.wsProxy.decompressor;
 
 import hj.wsProxy.CompressionUtils;
 import static hj.wsProxy.ContentEncoding.*;
-import junit.framework.TestCase;
+
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -20,7 +20,7 @@ public class DecompressorTest  {
 
         byte[] compressed = CompressionUtils.gzipString(UNCOMPRESSED_STRING);
 
-        String uncompressedString = Decompressor.forEncoding(GZIP.name()).decompress(compressed, "UTF-8");
+        String uncompressedString = Decompressor.forEncoding(GZIP.name()).decompressInternal(compressed, "UTF-8");
 
         Assert.assertEquals(UNCOMPRESSED_STRING, uncompressedString);
 
@@ -31,7 +31,7 @@ public class DecompressorTest  {
 
         byte[] compressed = CompressionUtils.gzipString(UNCOMPRESSED_STRING);
 
-        String uncompressedString = Decompressor.forEncoding("gZiP").decompress(compressed, "UTF-8");
+        String uncompressedString = Decompressor.forEncoding("gZiP").decompressInternal(compressed, "UTF-8");
 
         Assert.assertEquals(UNCOMPRESSED_STRING, uncompressedString);
 
@@ -52,7 +52,7 @@ public class DecompressorTest  {
                     try {
                         for(int j=0;j<10;j++) {
                             final byte[] compressed = CompressionUtils.gzipString(UNCOMPRESSED_STRING + this.toString());
-                            String uncompressed = Decompressor.forEncoding(GZIP.name()).decompress(compressed, "UTF-8");
+                            String uncompressed = Decompressor.forEncoding(GZIP.name()).decompressInternal(compressed, "UTF-8");
                             Assert.assertEquals(UNCOMPRESSED_STRING + this.toString(), uncompressed);
                         }
                     } catch (Exception e) {
@@ -76,7 +76,7 @@ public class DecompressorTest  {
 
         byte[] compressed = CompressionUtils.deflateString(UNCOMPRESSED_STRING);
 
-        String uncompressedString = Decompressor.forEncoding(DEFLATE.name()).decompress(compressed, "UTF-8");
+        String uncompressedString = Decompressor.forEncoding(DEFLATE.name()).decompressInternal(compressed, "UTF-8");
 
         Assert.assertEquals(UNCOMPRESSED_STRING, uncompressedString);
 
@@ -86,7 +86,7 @@ public class DecompressorTest  {
     public void testNoCompression() throws Exception {
         byte [] uncompressed =UNCOMPRESSED_STRING.getBytes("UTF-8");
 
-        String uncompressedString = Decompressor.forEncoding(null).decompress(uncompressed,"UTF-8");
+        String uncompressedString = Decompressor.forEncoding(null).decompressInternal(uncompressed, "UTF-8");
 
         Assert.assertEquals(UNCOMPRESSED_STRING, uncompressedString);
 

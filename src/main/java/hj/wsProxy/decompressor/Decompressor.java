@@ -41,6 +41,11 @@ public abstract class Decompressor {
         return result;
     }
 
-    public abstract String decompress(byte []bytes, String encoding) throws IOException;
+    public String decompress(byte[] bytes, String encoding) throws IOException {
+        if(bytes==null) return null;
+        return decompressInternal(bytes,encoding);
+    }
+
+    protected abstract String decompressInternal(byte[] bytes, String encoding) throws IOException;
 
 }

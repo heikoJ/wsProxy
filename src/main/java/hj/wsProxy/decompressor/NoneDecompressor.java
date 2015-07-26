@@ -11,8 +11,7 @@ public class NoneDecompressor extends Decompressor {
 
 
     @Override
-    public String decompress(byte[] bytes, String encoding) throws IOException {
-        if(bytes==null) return null;
+    public String decompressInternal(byte[] bytes, String encoding) throws IOException {
         return new String(bytes, encoding);
     }
 }
