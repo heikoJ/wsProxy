@@ -70,7 +70,7 @@ public class CompressionTransformerTest {
     @Test
     public void testLArgeDecompression() throws Exception {
 
-        String largeString = makelargeRandomString();
+        String largeString = makeLargeRandomString();
 
         System.out.println("size: " + largeString.getBytes("UTF-8").length / 1024 / 1024 + "MB");
 
@@ -97,7 +97,7 @@ public class CompressionTransformerTest {
 
     }
 
-    private String makelargeRandomString() {
+    private String makeLargeRandomString() {
         StringBuilder sb = new StringBuilder();
         for(int i=0;i< 1000000;i++) {
             sb.append(UUID.randomUUID().toString());
