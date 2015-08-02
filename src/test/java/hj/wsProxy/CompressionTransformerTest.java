@@ -13,6 +13,8 @@ import org.springframework.messaging.MessageHeaders;
 import java.nio.charset.Charset;
 import java.util.*;
 
+import static hj.wsProxy.ContentEncoding.*;
+
 /**
  * Created by heiko on 26.07.15.
  */
@@ -38,7 +40,7 @@ public class CompressionTransformerTest {
     @Before
     public void setUp() throws Exception {
         transformer = new CompressionTransformer();
-        Decompressor.forEncoding("gzip");
+        Decompressor.forEncoding(GZIP);
     }
 
     @Test
@@ -114,9 +116,9 @@ public class CompressionTransformerTest {
         Map<String,Object> headerMap =Collections.<String,Object>singletonMap(HttpHeaders.CONTENT_TYPE,Collections.singletonList("text/xml;charset=UTF-8"));
         MessageHeaders headers = new MessageHeaders(headerMap);
 
-        String charset = transformer.getContentCharset(headers);
+        Charset charset = HeaderUtils.getContentCharset(headers);
 
-        Assert.assertEquals("UTF-8", charset);
+        Assert.assertEquals(Charset.forName("UTF-8"), charset);
 
 
     }
@@ -127,10 +129,10 @@ public class CompressionTransformerTest {
         Map<String,Object> headerMap =Collections.<String,Object>singletonMap(HttpHeaders.CONTENT_TYPE,Collections.singletonList("text/xml"));
         MessageHeaders headers = new MessageHeaders(headerMap);
 
-        String charset = transformer.getContentCharset(headers);
+        Charset charset = HeaderUtils.getContentCharset(headers);
 
 
-        Assert.assertEquals(Charset.defaultCharset().name(), charset);
+        Assert.assertEquals(Charset.defaultCharset(), charset);
 
     }
 
@@ -140,10 +142,10 @@ public class CompressionTransformerTest {
         Map<String,Object> headerMap =Collections.<String,Object>singletonMap(HttpHeaders.CONTENT_TYPE,Collections.singletonList("text/xml;charset="));
         MessageHeaders headers = new MessageHeaders(headerMap);
 
-        String charset = transformer.getContentCharset(headers);
+        Charset charset = HeaderUtils.getContentCharset(headers);
 
 
-        Assert.assertEquals(Charset.defaultCharset().name(), charset);
+        Assert.assertEquals(Charset.defaultCharset(), charset);
 
     }
 
@@ -153,10 +155,10 @@ public class CompressionTransformerTest {
         Map<String,Object> headerMap =Collections.<String,Object>singletonMap(HttpHeaders.CONTENT_TYPE,Collections.singletonList(null));
         MessageHeaders headers = new MessageHeaders(headerMap);
 
-        String charset = transformer.getContentCharset(headers);
+        Charset charset = HeaderUtils.getContentCharset(headers);
 
 
-        Assert.assertEquals(Charset.defaultCharset().name(), charset);
+        Assert.assertEquals(Charset.defaultCharset(), charset);
 
     }
 

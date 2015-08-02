@@ -2,6 +2,7 @@ package hj.wsProxy.decompressor;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.nio.charset.Charset;
 import java.util.zip.GZIPInputStream;
 
 /**
@@ -11,8 +12,8 @@ public class GZIPDecompressor extends Decompressor {
 
 
     @Override
-    public String decompressInternal(byte[] bytes, String encoding) throws IOException {
-        GZIPInputStream gis = new GZIPInputStream(new ByteArrayInputStream(bytes));
-        return getUncompressedString(gis,encoding);
+    public String doDecompress(byte[] bytes, Charset charset) throws IOException {
+        GZIPInputStream inputStream = new GZIPInputStream(new ByteArrayInputStream(bytes));
+        return getUncompressedString(inputStream, charset);
     }
 }

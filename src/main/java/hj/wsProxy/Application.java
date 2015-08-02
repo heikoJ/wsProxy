@@ -10,6 +10,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.EnableAspectJAutoProxy;
 import org.springframework.context.annotation.ImportResource;
 import org.springframework.core.io.ClassPathResource;
+import org.springframework.expression.Expression;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
@@ -18,9 +19,13 @@ import org.springframework.http.converter.ByteArrayHttpMessageConverter;
 import org.springframework.http.converter.HttpMessageConverter;
 import org.springframework.http.converter.StringHttpMessageConverter;
 import org.springframework.integration.annotation.IntegrationComponentScan;
+import org.springframework.integration.channel.DirectChannel;
 import org.springframework.integration.config.EnableIntegration;
+import org.springframework.integration.dsl.GenericEndpointSpec;
 import org.springframework.integration.dsl.IntegrationFlow;
 import org.springframework.integration.dsl.IntegrationFlows;
+import org.springframework.integration.dsl.RouterSpec;
+import org.springframework.integration.dsl.support.Consumer;
 import org.springframework.integration.dsl.support.Transformers;
 import org.springframework.integration.http.inbound.HttpRequestHandlingMessagingGateway;
 import org.springframework.integration.http.inbound.RequestMapping;
@@ -28,7 +33,11 @@ import org.springframework.integration.http.outbound.HttpRequestExecutingMessage
 import org.springframework.integration.http.support.DefaultHttpHeaderMapper;
 import org.springframework.integration.jmx.config.EnableIntegrationMBeanExport;
 import org.springframework.integration.mapping.HeaderMapper;
+import org.springframework.integration.router.ExpressionEvaluatingRouter;
+import org.springframework.integration.router.HeaderValueRouter;
+import org.springframework.integration.support.MessageBuilder;
 import org.springframework.integration.transformer.AbstractTransformer;
+import org.springframework.integration.transformer.GenericTransformer;
 import org.springframework.integration.ws.WebServiceHeaders;
 import org.springframework.jmx.support.MBeanServerFactoryBean;
 import org.springframework.messaging.Message;
@@ -60,6 +69,8 @@ import java.util.zip.InflaterInputStream;
 @EnableWebMvc
 @EnableAspectJAutoProxy
 public class Application extends SpringBootServletInitializer {
+
+    public static final String COMPRESSION_FROM_HEADER_EXPRESSION = " T(hj.wsProxy.ContentEncoding).forValue(headers[ T(org.springframework.http.HttpHeaders).CONTENT_ENCODING ]).name()";
 
     public static void main(String[] args) {
         //Set saxon as transformer.
@@ -110,11 +121,21 @@ public class Application extends SpringBootServletInitializer {
 
         gateway.setRequestPayloadType(byte[].class);
 
+        //gateway.setRequestChannelName("requestChannel");
+
+
 
 
 
         return gateway;
     }
+
+
+    /*
+    @Bean
+    DirectChannel requestChannel() {
+        return new DirectChannel();
+    } */
 
     private HttpMessageConverter<?> getXmlMessageConverter() {
         StringHttpMessageConverter converter = new StringHttpMessageConverter(Charset.forName("UTF-8"));
@@ -203,19 +224,59 @@ public class Application extends SpringBootServletInitializer {
 
 
     @Bean
-    public IntegrationFlow convert(HttpRequestHandlingMessagingGateway inbound, HttpRequestExecutingMessageHandler outbound, CompressionTransformer compressionTransformer) {
+    ByteArrayToStringTransformer toStringTransformer() { return new ByteArrayToStringTransformer();}
+
+
+    @Bean
+    public IntegrationFlow inboundFlow(HttpRequestHandlingMessagingGateway inbound) {
+        return IntegrationFlows.
+                from(inbound).
+                route(COMPRESSION_FROM_HEADER_EXPRESSION,
+                        new Consumer<RouterSpec<ExpressionEvaluatingRouter>>() {
+                            @Override
+                            public void accept(RouterSpec<ExpressionEvaluatingRouter> spec) {
+
+                                spec.channelMapping(ContentEncoding.GZIP.name(), "compressedChannel").
+                                        channelMapping(ContentEncoding.DEFLATE.name(), "compressedChannel").
+                                        channelMapping(ContentEncoding.NONE.name(), "uncompressedChannel");
+
+                            }
+                        }
+                ).
+                get();
+    }
+
+
+    @Bean
+    public IntegrationFlow uncompressedFlow(ByteArrayToStringTransformer toStringTransformer) {
+        return IntegrationFlows.
+                from("uncompressedChannel")
+                .transform(toStringTransformer)
+                .channel("outboundChannel")
+                .get();
+    }
+
+
+    @Bean
+    public IntegrationFlow compressedFlow(CompressionTransformer compressionTransformer) {
+        return IntegrationFlows.
+                from("compressedChannel").
+                transform(compressionTransformer).
+                channel("outboundChannel").
+                get();
+    }
 
 
 
+
+    @Bean
+    public IntegrationFlow outboundFlow( HttpRequestExecutingMessageHandler outbound) {
 
 
         return IntegrationFlows.
-                from(inbound).
-                transform(compressionTransformer).
+                from("outboundChannel").
                 enrichHeaders(headers()).
                 handle(outbound).
-             //   transform(Transformers.xslt(new ClassPathResource(xsltPath))).
-
                 get();
     }
 

@@ -10,10 +10,8 @@ import org.springframework.integration.support.MessageBuilder;
 import org.springframework.integration.transformer.AbstractTransformer;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageHeaders;
-import org.springframework.util.StringUtils;
 
 import java.nio.charset.Charset;
-import java.util.List;
 
 /**
  * Created by heiko on 25.07.15.
@@ -29,8 +27,8 @@ public class CompressionTransformer extends AbstractTransformer {
     protected Object doTransform(Message<?> fromMessage) throws Exception {
         byte[] fromPayload = (byte[])fromMessage.getPayload();
         MessageHeaders headers = fromMessage.getHeaders();
-        String fromContentEncoding = getContentEncoding(headers);
-        String fromCharset = getContentCharset(headers);
+        ContentEncoding fromContentEncoding = HeaderUtils.getContentEncoding(headers);
+        Charset fromCharset = HeaderUtils.getContentCharset(headers);
 
         Profiler profiler = Profiler.
                 forLogger(LOGGER).
@@ -57,42 +55,6 @@ public class CompressionTransformer extends AbstractTransformer {
                 build();
     }
 
-
-    private String getContentEncoding(MessageHeaders headers) {
-        List<String> values  = (List<String>)headers.get(HttpHeaders.CONTENT_ENCODING);
-
-        if(values==null || values.isEmpty()) {
-            return null;
-        }
-
-        return values.get(0);
-
-    }
-
-    String getContentCharset(MessageHeaders headers) {
-        List<String> values  = (List<String>)headers.get(HttpHeaders.CONTENT_TYPE);
-
-        if(values==null || values.isEmpty()) {
-            return null;
-        }
-
-        String contentType = values.get(0);
-        String charset = extractCharsetOrNull(contentType);
-
-        if(charset==null) {
-            charset = Charset.defaultCharset().name();
-        }
-
-        return charset;
-    }
-
-    private String extractCharsetOrNull(String contentType) {
-        if(StringUtils.isEmpty(contentType)) return null;
-        if(contentType.matches("charset=.+")) {
-            return contentType.replaceFirst("^.*;charset=(.+)$", "$1");
-        }
-        return null;
-    }
 
 }
 

@@ -7,11 +7,15 @@ import static hj.wsProxy.ContentEncoding.*;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.nio.charset.Charset;
+
 /**
  * Created by heiko on 26.07.15.
  */
 public class DecompressorTest  {
 
+
+    private static Charset DEFAULT_CHARSET = Charset.forName("UTF-8");
 
     private static final String UNCOMPRESSED_STRING ="This is an uncompressed String";
 
@@ -20,22 +24,12 @@ public class DecompressorTest  {
 
         byte[] compressed = CompressionUtils.gzipString(UNCOMPRESSED_STRING);
 
-        String uncompressedString = Decompressor.forEncoding(GZIP.name()).decompressInternal(compressed, "UTF-8");
+        String uncompressedString = Decompressor.forEncoding(GZIP).doDecompress(compressed, DEFAULT_CHARSET);
 
         Assert.assertEquals(UNCOMPRESSED_STRING, uncompressedString);
 
     }
 
-    @Test
-    public void testGzipDecompressWithMixedCaseEncoding() throws Exception {
-
-        byte[] compressed = CompressionUtils.gzipString(UNCOMPRESSED_STRING);
-
-        String uncompressedString = Decompressor.forEncoding("gZiP").decompressInternal(compressed, "UTF-8");
-
-        Assert.assertEquals(UNCOMPRESSED_STRING, uncompressedString);
-
-    }
 
     @Test
     public void testMultiThreaded() throws Exception {
@@ -52,7 +46,7 @@ public class DecompressorTest  {
                     try {
                         for(int j=0;j<10;j++) {
                             final byte[] compressed = CompressionUtils.gzipString(UNCOMPRESSED_STRING + this.toString());
-                            String uncompressed = Decompressor.forEncoding(GZIP.name()).decompressInternal(compressed, "UTF-8");
+                            String uncompressed = Decompressor.forEncoding(GZIP).doDecompress(compressed, DEFAULT_CHARSET);
                             Assert.assertEquals(UNCOMPRESSED_STRING + this.toString(), uncompressed);
                         }
                     } catch (Exception e) {
@@ -76,32 +70,20 @@ public class DecompressorTest  {
 
         byte[] compressed = CompressionUtils.deflateString(UNCOMPRESSED_STRING);
 
-        String uncompressedString = Decompressor.forEncoding(DEFLATE.name()).decompressInternal(compressed, "UTF-8");
-
-        Assert.assertEquals(UNCOMPRESSED_STRING, uncompressedString);
-
-    }
-
-    @Test
-    public void testNoCompression() throws Exception {
-        byte [] uncompressed =UNCOMPRESSED_STRING.getBytes("UTF-8");
-
-        String uncompressedString = Decompressor.forEncoding(null).decompressInternal(uncompressed, "UTF-8");
+        String uncompressedString = Decompressor.forEncoding(DEFLATE).doDecompress(compressed, DEFAULT_CHARSET);
 
         Assert.assertEquals(UNCOMPRESSED_STRING, uncompressedString);
 
     }
 
 
-    @Test
-    public void testNoneEncodingWithNullContent() throws Exception {
+    @Test(expected = IllegalArgumentException.class)
+    public void testNullEncodingWithNullContent() throws Exception {
         byte[] uncompressed = null;
 
         String uncompressedString = Decompressor.
                 forEncoding(null).
-                decompress(uncompressed, "UTF-8");
-
-        Assert.assertNull(uncompressedString);
+                decompress(uncompressed, DEFAULT_CHARSET);
     }
 
 
@@ -110,8 +92,8 @@ public class DecompressorTest  {
         byte[] uncompressed = null;
 
         String uncompressedString = Decompressor.
-                forEncoding(GZIP.name()).
-                decompress(uncompressed, "UTF-8");
+                forEncoding(GZIP).
+                decompress(uncompressed, DEFAULT_CHARSET);
 
         Assert.assertNull(uncompressedString);
     }
@@ -121,8 +103,8 @@ public class DecompressorTest  {
         byte[] uncompressed = null;
 
         String uncompressedString = Decompressor.
-                forEncoding(GZIP.name()).
-                decompress(uncompressed, "UTF-8");
+                forEncoding(GZIP).
+                decompress(uncompressed, DEFAULT_CHARSET);
 
         Assert.assertNull(uncompressedString);
     }

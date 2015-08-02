@@ -1,5 +1,6 @@
 package hj.wsProxy.decompressor;
 
+import hj.wsProxy.ContentEncoding;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -7,6 +8,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.nio.charset.Charset;
 
 
 /**
@@ -17,8 +19,8 @@ public abstract class Decompressor {
     private static final Logger LOGGER = LoggerFactory.getLogger(Decompressor.class);
 
 
-    public static Decompressor forEncoding(String inputEncoding) {
-        Decompressor decompressor = DecompressAlgorithm.
+    public static Decompressor forEncoding(ContentEncoding inputEncoding) {
+        Decompressor decompressor = DecompressImplementation.
                 forEncoding(inputEncoding).
                 getDecompressor();
 
@@ -29,10 +31,10 @@ public abstract class Decompressor {
 
 
 
-    protected String getUncompressedString(InputStream inputStream, String encoding) throws IOException {
+    protected String getUncompressedString(InputStream inputStream, Charset charset) throws IOException {
         String result = "";
 
-        BufferedReader bf = new BufferedReader(new InputStreamReader(inputStream, encoding));
+        BufferedReader bf = new BufferedReader(new InputStreamReader(inputStream, charset));
         String line;
         while ((line = bf.readLine()) != null) {
             result += line;
@@ -41,11 +43,11 @@ public abstract class Decompressor {
         return result;
     }
 
-    public String decompress(byte[] bytes, String encoding) throws IOException {
+    public String decompress(byte[] bytes, Charset charset) throws IOException {
         if(bytes==null) return null;
-        return decompressInternal(bytes,encoding);
+        return doDecompress(bytes, charset);
     }
 
-    protected abstract String decompressInternal(byte[] bytes, String encoding) throws IOException;
+    protected abstract String doDecompress(byte[] bytes, Charset charset) throws IOException;
 
 }
