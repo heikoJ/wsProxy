@@ -121,8 +121,6 @@ public class Application extends SpringBootServletInitializer {
 
         gateway.setRequestPayloadType(byte[].class);
 
-        //gateway.setRequestChannelName("requestChannel");
-
 
 
 
@@ -131,11 +129,6 @@ public class Application extends SpringBootServletInitializer {
     }
 
 
-    /*
-    @Bean
-    DirectChannel requestChannel() {
-        return new DirectChannel();
-    } */
 
     private HttpMessageConverter<?> getXmlMessageConverter() {
         StringHttpMessageConverter converter = new StringHttpMessageConverter(Charset.forName("UTF-8"));

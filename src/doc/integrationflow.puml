@@ -1,0 +1,15 @@
+@startuml
+
+
+(*)  --> "Inbound Gateway"
+
+if "Content Type Router" then
+--> [GZIP or DEFLATE] "decompress"
+--> "transform content"
+else
+--> [NONE] "convert to String"
+--> "transform content"
+endif
+--> "outbound gateway"
+-->(*)
+@enduml

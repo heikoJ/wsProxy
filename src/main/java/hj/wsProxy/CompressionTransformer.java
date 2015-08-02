@@ -18,7 +18,6 @@ import java.nio.charset.Charset;
  */
 
 @MonitoredWithSpring
-
 public class CompressionTransformer extends AbstractTransformer {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(CompressionTransformer.class);
